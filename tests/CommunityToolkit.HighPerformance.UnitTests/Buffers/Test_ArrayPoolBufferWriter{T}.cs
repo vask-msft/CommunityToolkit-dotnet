@@ -218,4 +218,32 @@ public class Test_ArrayPoolBufferWriterOfT
         // Now check that the writer is actually disposed instead
         _ = Assert.ThrowsException<ObjectDisposedException>(() => writer.Capacity);
     }
+
+    [TestMethod]
+    public void Test_ArrayPoolBufferWriterOfT_WriteTo()
+    {
+        using ArrayPoolBufferWriter<byte>? writerSource = new(), writerTarget = new();
+
+        Span<byte> spanSource = writerSource.GetSpan(4).Slice(0, 4);
+
+        byte[] data = { 1, 2, 3, 4 };
+
+        data.CopyTo(spanSource);
+
+        writerSource.Advance(4);
+
+        Assert.AreEqual(writerSource.WrittenCount, 4);
+        Assert.IsTrue(spanSource.SequenceEqual(data));
+
+        // Wrap the target writer into a custom internal stream type and produce a write-only
+        // stream that essentially mirrors the IBufferWriter<T> functionality as a stream.
+        using Stream stream = writerTarget.AsStream();
+
+        // zero-copy the internal buffer to the target stream
+        writerSource.WriteTo(stream);
+
+        Assert.AreEqual(writerTarget.WrittenCount, 4);
+        byte[] written = writerTarget.WrittenMemory.ToArray();
+        Assert.IsTrue(written.SequenceEqual(data));
+    }
 }

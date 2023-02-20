@@ -5,6 +5,7 @@
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using CommunityToolkit.HighPerformance.Buffers.Views;
@@ -323,6 +324,30 @@ public sealed class ArrayPoolBufferWriter<T> : IBuffer<T>, IMemoryOwner<T>
 
         // Same representation used in Span<T>
         return $"CommunityToolkit.HighPerformance.Buffers.ArrayPoolBufferWriter<{typeof(T)}>[{this.index}]";
+    }
+
+    /// <summary>
+    /// Zero-copy output of the underlying memory to the stream, using <c>Stream.Write</c>.
+    /// </summary>
+    /// <param name="stream">Stream to write the buffer to.</param>
+    /// <exception cref="ArgumentNullException">Stream invalid.</exception>
+    /// <exception cref="ArgumentException">Used with T other than byte.</exception>
+    public void WriteTo(Stream stream)
+    {
+        if (typeof(T) == typeof(byte) &&
+            this.array is byte[] bytes)
+        {
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            stream.Write(bytes, offset: 0, count: this.index);
+        }
+        else
+        {
+            throw new ArgumentException("T : byte expected");
+        }
     }
 
     /// <summary>
